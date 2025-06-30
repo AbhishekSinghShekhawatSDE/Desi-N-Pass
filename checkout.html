@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en-IN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Your Purchase – Desi N Pass</title>
+    
+    <!-- Prevent this page from being indexed by search engines -->
+    <meta name="robots" content="noindex, nofollow">
+
+    <!-- ==============
+    SECURITY (CSP)
+    =============== -->
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self'; 
+        script-src 'self' https://checkout.razorpay.com https://cdnjs.cloudflare.com; 
+        style-src 'self' https://fonts.googleapis.com; 
+        img-src 'self' data:; 
+        font-src 'self' https://fonts.gstatic.com; 
+        connect-src 'self' https://api.razorpay.com;
+        frame-src https://api.razorpay.com;">
+
+    <!-- ==============
+    ASSETS & FONTS
+    =============== -->
+    <link rel="icon" type="image/png" href="assets/logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Link to the main stylesheet for a consistent look -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Scripts for this page -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha512-E8QSvWZ0eCLGk4km3hxSsNmGWbLtSCSUcewDQPQWZF6pEU8GlT8a5fF32wOl1i8ftdMhssTrF/OhyGWwonTcXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body>
+
+    <!-- RE-USE THE SAME HEADER FOR CONSISTENCY -->
+    <header class="main-header">
+        <div class="header-container">
+            <a href="index.html" class="logo" aria-label="Go to homepage">
+                <img src="assets/logo.png" alt="Desi N Pass Logo">
+                <span>Desi N Pass</span>
+            </a>
+            <nav class="main-nav">
+                <a href="index.html#features">Features</a>
+                <a href="index.html#verification">Verify</a>
+                <a href="index.html#buy" class="cta-button nav-cta">Get Pass</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section id="checkout-main">
+            <div class="container">
+                <div class="checkout-card">
+                    <div class="section-header">
+                        <h2>You're Almost There.</h2>
+                        <p class="subtitle">Just one final step to secure your legendary status.</p>
+                    </div>
+
+                    <!-- User details are now dynamically filled from sessionStorage -->
+                    <div class="user-details-summary">
+                        <h3>Confirm Your Details:</h3>
+                        <p><strong>Name on Card:</strong> <span id="checkout-name">Loading...</span></p>
+                        <p><strong>Delivery Email:</strong> <span id="checkout-email">Loading...</span></p>
+                    </div>
+
+                    <div class="loader">
+                        <p>Initializing secure payment...</p>
+                        <div class="spinner"></div>
+                        <p class="small-text">Your payment window will open automatically.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <!-- RE-USE THE SAME FOOTER -->
+     <footer class="main-footer">
+        <div class="container">
+            <div class="footer-top">
+                <p class="footer-logo">Desi N Pass</p>
+                <div class="footer-links">
+                    <a href="index.html#features">Features</a>
+                    <a href="index.html#buy">Buy Now</a>
+                    <a href="index.html#verification">Verification</a>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>© <span id="footer-year">2024</span> Desi N Pass. A Satirical Digital Collectible. Use with a sense of humor.</p>
+                
+                <div class="legal-links">
+                    <a href="contact.html" target="_blank" rel="noopener noreferrer">Contact Us</a>
+                    <span>|</span>
+                    <a href="shipping.html" target="_blank" rel="noopener noreferrer">Shipping Policy</a>
+                    <span>|</span>
+                    <a href="refunds.html" target="_blank" rel="noopener noreferrer">Refunds & Cancellations</a>
+                    <span>|</span>
+                    <a href="terms.html" target="_blank" rel="noopener noreferrer">Terms of Service</a>
+                    <span>|</span>
+                    <a href="privacy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const yearSpan = document.getElementById('footer-year');
+            if (yearSpan) yearSpan.textContent = new Date().getFullYear();
+
+            // This configuration is specific to the checkout page
+            const CONFIG = {
+                RAZORPAY_KEY_ID: "rzp_test_CLKQEu5FBCyHVI",
+                SECRET_KEY: "o9D8U*yrfd@Krryna7brBDeEROfWpB!%",
+                PRODUCT_NAME: "Desi N Pass",
+                CURRENCY: "INR",
+                AMOUNT_IN_PAISE: 2000,
+            };
+
+            const name = sessionStorage.getItem('dnp_userName');
+            const email = sessionStorage.getItem('dnp_userEmail');
+
+            // Security check: If a user lands here directly without data, redirect them.
+            if (!name || !email) {
+                alert("Error: Order details not found. Please start from the beginning.");
+                window.location.href = 'index.html#buy';
+                return;
+            }
+
+            // Populate the summary on the page
+            document.getElementById('checkout-name').textContent = name;
+            document.getElementById('checkout-email').textContent = email;
+
+            // Prepare the tokens and options for Razorpay
+            const orderDataString = email.toLowerCase() + '|' + new Date().getTime();
+            const hashedToken = CryptoJS.HmacSHA256(orderDataString, CONFIG.SECRET_KEY).toString();
+
+            const razorpayOptions = {
+                key: CONFIG.RAZORPAY_KEY_ID,
+                amount: CONFIG.AMOUNT_IN_PAISE,
+                currency: CONFIG.CURRENCY,
+                name: CONFIG.PRODUCT_NAME,
+                image: "assets/logo.png",
+                prefill: { name, email },
+                notes: { "verification_token": hashedToken },
+                theme: { color: "#007AFF" },
+                handler: function (response) {
+                    // On SUCCESS, build a clean URL with all the data and redirect back to index.html
+                    const params = new URLSearchParams({
+                        status: 'success',
+                        name: encodeURIComponent(name),
+                        email: encodeURIComponent(email),
+                        paymentId: encodeURIComponent(response.razorpay_payment_id),
+                        token: encodeURIComponent(orderDataString)
+                    });
+                    window.location.href = `index.html?${params.toString()}`;
+                },
+                modal: {
+                    ondismiss: function () {
+                        alert("Payment was cancelled. Redirecting back to the home page.");
+                        window.location.href = 'index.html';
+                    }
+                }
+            };
+            
+            const rzp = new Razorpay(razorpayOptions);
+            
+            rzp.on('payment.failed', function (response){
+                alert("Payment failed: " + response.error.description + ". Please try again.");
+                window.location.href = 'index.html#buy';
+            });
+
+            // Open Razorpay automatically after a short delay to let the page render
+            setTimeout(() => {
+                 rzp.open();
+            }, 500);
+        });
+    </script>
+</body>
+</html>
